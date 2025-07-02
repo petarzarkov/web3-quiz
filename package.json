@@ -10,7 +10,7 @@
     "coverage": "SOLIDITY_COVERAGE=true pnpm hardhat coverage",
     "node": "pnpm hardhat node",
     "interact": "pnpm hardhat run scripts/interact.ts --network localhost",
-    "igdeploy": "pnpm hardhat ignition deploy ignition/modules/Apollo.ts --network localhost"
+    "igdeploy": "pnpm hardhat ignition deploy ignition/modules/Quiz.ts --network localhost"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^0.15.12",
