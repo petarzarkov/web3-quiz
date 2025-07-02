@@ -2,7 +2,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpe
 import { expect } from "chai";
 import { ethers } from "ethers";
 import hre from "hardhat";
-import { parseGwei } from "viem";
+import { getAddress, parseGwei } from "viem";
 
 describe("Quiz", function () {
   async function deployQuizFixture() {
@@ -40,14 +40,20 @@ describe("Quiz", function () {
     };
   }
 
-  describe("Getters", function () {
+  describe("Deploy & State", function () {
+    it("Should be deployed", async function () {
+      const { quiz } = await loadFixture(deployQuizFixture);
+
+      expect(quiz.address).not.to.equal(ethers.ZeroAddress);
+    });
+
     it("Should get the right question", async function () {
       const { quiz, question } = await loadFixture(deployQuizFixture);
 
       expect(await quiz.read.question()).to.equal(question);
     });
 
-    it("Should get the balance", async function () {
+    it("Should get the balance with the deployed amount", async function () {
       const { quiz, amount } = await loadFixture(deployQuizFixture);
 
       expect(await quiz.read.getBalance()).to.equal(amount);
@@ -66,17 +72,37 @@ describe("Quiz", function () {
     });
 
     describe("Events", function () {
-      it("Should emit an event on successfull guess", async function () {
-        const { quiz, publicClient, answer, hashedAnswer } = await loadFixture(
+      it("Should emit an event on successful guess", async function () {
+        const { quiz, publicClient, answer } = await loadFixture(
           deployQuizFixture
         );
 
         const hash = await quiz.write.guess([answer]);
         await publicClient.waitForTransactionReceipt({ hash });
 
-        const withdrawalEvents = await quiz.getEvents.QuizGuessed();
-        expect(withdrawalEvents).to.have.lengthOf(1);
-        expect(withdrawalEvents[0].args.answer).to.equal(answer);
+        const quizEvents = await quiz.getEvents.QuizGuessed();
+        expect(quizEvents).to.have.lengthOf(1);
+        expect(quizEvents[0].args.answer).to.equal(answer);
+      });
+
+      it("Should emit an event on receive", async function () {
+        const { quiz, owner, publicClient } = await loadFixture(
+          deployQuizFixture
+        );
+
+        const newAmount = parseGwei("2");
+        const hash = await owner.sendTransaction({
+          to: quiz.address,
+          value: newAmount,
+        });
+        await publicClient.waitForTransactionReceipt({ hash });
+
+        const quizEvents = await quiz.getEvents.QuizFund();
+        expect(quizEvents).to.have.lengthOf(1);
+        expect(quizEvents[0].args.amount).to.equal(newAmount);
+        expect(quizEvents[0].args.sender).to.equal(
+          getAddress(owner.account.address)
+        );
       });
     });
   });
