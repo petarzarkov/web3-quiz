@@ -41,19 +41,19 @@ describe("Quiz", function () {
   }
 
   describe("Deploy & State", function () {
-    it("Should be deployed", async function () {
+    it("should be deployed", async function () {
       const { quiz } = await loadFixture(deployQuizFixture);
 
       expect(quiz.address).not.to.equal(ethers.ZeroAddress);
     });
 
-    it("Should get the right question", async function () {
+    it("should get the right question", async function () {
       const { quiz, question } = await loadFixture(deployQuizFixture);
 
       expect(await quiz.read.question()).to.equal(question);
     });
 
-    it("Should get the balance with the deployed amount", async function () {
+    it("should get the balance with the deployed amount", async function () {
       const { quiz, amount } = await loadFixture(deployQuizFixture);
 
       expect(await quiz.read.getBalance()).to.equal(amount);
@@ -62,7 +62,7 @@ describe("Quiz", function () {
 
   describe("Gameplay", function () {
     describe("Validations", function () {
-      it("Should revert when wrong answer", async function () {
+      it("should revert when wrong guess", async function () {
         const { quiz } = await loadFixture(deployQuizFixture);
 
         await expect(
@@ -72,7 +72,7 @@ describe("Quiz", function () {
     });
 
     describe("Events", function () {
-      it("Should emit an event on successful guess", async function () {
+      it("should emit an event on successful guess", async function () {
         const { quiz, publicClient, answer } = await loadFixture(
           deployQuizFixture
         );
@@ -83,22 +83,40 @@ describe("Quiz", function () {
         const quizEvents = await quiz.getEvents.QuizGuessed();
         expect(quizEvents).to.have.lengthOf(1);
         expect(quizEvents[0].args.answer).to.equal(answer);
+        expect(await quiz.read.getBalance()).to.equal(0n);
       });
 
-      it("Should emit an event on receive", async function () {
-        const { quiz, owner, publicClient } = await loadFixture(
-          deployQuizFixture
-        );
+      it("should emit an event on receive", async function () {
+        const { quiz, owner } = await loadFixture(deployQuizFixture);
 
         const newAmount = parseGwei("2");
-        const hash = await owner.sendTransaction({
+        await owner.sendTransaction({
           to: quiz.address,
           value: newAmount,
         });
-        await publicClient.waitForTransactionReceipt({ hash });
 
         const quizEvents = await quiz.getEvents.QuizFund();
         expect(quizEvents).to.have.lengthOf(1);
+        expect(quizEvents[0].args.eventName).to.equal("receive");
+        expect(quizEvents[0].args.amount).to.equal(newAmount);
+        expect(quizEvents[0].args.sender).to.equal(
+          getAddress(owner.account.address)
+        );
+      });
+
+      it("should emit an event on fallback", async function () {
+        const { quiz, owner } = await loadFixture(deployQuizFixture);
+
+        const newAmount = parseGwei("2");
+        await owner.sendTransaction({
+          data: "0x1337",
+          to: quiz.address,
+          value: newAmount,
+        });
+
+        const quizEvents = await quiz.getEvents.QuizFund();
+        expect(quizEvents).to.have.lengthOf(1);
+        expect(quizEvents[0].args.eventName).to.equal("fallback");
         expect(quizEvents[0].args.amount).to.equal(newAmount);
         expect(quizEvents[0].args.sender).to.equal(
           getAddress(owner.account.address)

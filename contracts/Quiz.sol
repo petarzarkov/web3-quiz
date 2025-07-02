@@ -6,7 +6,7 @@ contract Quiz {
     bytes32 hashedAnswer;
     string salt = "ya salty brother?";
 
-    event QuizFund(uint256 amount, address sender);
+    event QuizFund(string eventName, uint256 amount, address sender);
     event QuizGuessed(address sender, string answer);
 
     constructor(string memory _question, bytes32 _hashedAnswer) payable {
@@ -26,11 +26,11 @@ contract Quiz {
     }
 
     fallback() external payable {
-        emit QuizFund(msg.value, msg.sender);
+        emit QuizFund("fallback", msg.value, msg.sender);
     }
 
     receive() external payable {
-        emit QuizFund(msg.value, msg.sender);
+        emit QuizFund("receive", msg.value, msg.sender);
     }
 
     function getBalance() public view returns(uint256) {
